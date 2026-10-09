@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A Little Love for You</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 100%; min-height: 100%; }
+  body {
+    min-height: 100vh;
+    overflow-x: hidden;
+    color: #fff;
+    background:
+      radial-gradient(ellipse at 50% 36%, rgba(64, 12, 110, .38), transparent 48%),
+      radial-gradient(ellipse at 50% 100%, #160526 0%, #070411 52%, #03020a 100%);
+    font-family: Georgia, "Times New Roman", serif;
+  }
+  #stars { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+  main { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 34px 18px 28px; }
+  .intro { text-align: center; max-width: 700px; margin: 0 auto 8px; }
+  .eyebrow { font-size: .76rem; letter-spacing: .28em; text-transform: uppercase; color: #dcb8ff; opacity: .9; }
+  h1 { font-size: clamp(1.35rem, 4vw, 2.15rem); font-weight: 400; line-height: 1.3; margin: 12px 0 7px; text-shadow: 0 0 18px #b64cff; }
+  .subtitle { font-size: clamp(.88rem, 2.4vw, 1.05rem); color: #d9c7eb; line-height: 1.6; }
+  .heart-stage { width: min(86vw, 470px); aspect-ratio: 1 / .86; position: relative; margin: 8px auto 0; }
+  canvas#heart { width: 100%; height: 100%; display: block; filter: drop-shadow(0 0 10px rgba(255, 42, 207, .65)); }
+  .side-note { position: absolute; font: italic 12px/1.5 Georgia, serif; color: #e5b7ff; text-shadow: 0 0 9px #d42fff; max-width: 100px; }
+  .note-left { left: -3%; top: 43%; transform: translateY(-50%); text-align: right; }
+  .note-right { right: -4%; top: 34%; }
+  .bottom-note { text-align: center; color: #d5b7e9; font-size: .92rem; margin-top: -1px; line-height: 1.7; }
+  .bottom-note strong { color: #ff8ce9; font-weight: normal; }
+  .message-card { width: min(680px, 100%); margin: 25px auto 0; padding: 20px 22px; border: 1px solid rgba(220, 129, 255, .25); border-radius: 16px; background: rgba(13, 7, 28, .72); box-shadow: 0 0 35px rgba(145, 35, 195, .13), inset 0 0 22px rgba(138, 37, 180, .05); text-align: center; backdrop-filter: blur(8px); }
+  .message-card h2 { margin: 0 0 9px; font-size: 1.15rem; font-weight: normal; color: #ffb6f0; }
+  .message-card p { margin: 0; color: #ded0e9; line-height: 1.75; font-size: .98rem; }
+  .signature { color: #f58bdd !important; margin-top: 12px !important; font-style: italic; }
+  .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 17px; }
+  button { border: 1px solid rgba(255, 149, 236, .6); border-radius: 999px; padding: 10px 17px; background: rgba(100, 20, 117, .35); color: #ffe4fa; font: inherit; cursor: pointer; transition: .2s; }
+  button:hover { background: rgba(172, 42, 173, .55); box-shadow: 0 0 18px #a72ab5; transform: translateY(-1px); }
+  footer { color: #8f789f; font: 11px/1.6 Arial, sans-serif; letter-spacing: .08em; text-align: center; margin-top: 23px; }
+  @media (max-width: 520px) {
+    main { padding-top: 27px; }
+    .heart-stage { width: 94vw; }
+    .side-note { font-size: 10px; max-width: 75px; }
+    .note-left { left: 0; }
+    .note-right { right: 0; }
+    .message-card { padding: 17px 15px; margin-top: 20px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="stars" aria-hidden="true"></canvas>
+<main>
+  <header class="intro">
+    <div class="eyebrow">A little something for you</div>
+    <h1>Somewhere in this universe, it's always you.</h1>
+    <div class="subtitle">If I could turn my feelings into stars, the sky would never be dark.</div>
+  </header>
+
+  <section class="heart-stage" aria-label="An animated heart made of glowing pink particles">
+    <div class="side-note note-left">you make<br>ordinary days<br>feel magical</div>
+    <canvas id="heart"></canvas>
+    <div class="side-note note-right">my favorite<br>kind of<br>forever</div>
+  </section>
+
+  <div class="bottom-note">Made of a thousand little lights, <strong>all leading back to you.</strong></div>
+
+  <section class="message-card">
+    <h2>For my favorite person ♡</h2>
+    <p>
+      No matter how big the universe is, I would still look for you.
+      You bring warmth to my quiet days, light to my darkest nights,
+      and a kind of happiness I can't quite put into words.
+    </p>
+    <p class="signature">With all my heart, always.</p>
+    <div class="controls">
+      <button id="burstBtn" type="button">Make a wish ✨</button>
+      <button id="messageBtn" type="button">A little more love ♡</button>
+    </div>
+  </section>
+  <footer>MADE WITH LOVE · JUST FOR YOU</footer>
+</main>
+<script>
+(() => {
+  const starCanvas = document.getElementById('stars');
+  const starCtx = starCanvas.getContext('2d');
+  const heartCanvas = document.getElementById('heart');
+  const ctx = heartCanvas.getContext('2d');
+  let W = 0, H = 0, dpr = 1, particles = [], stars = [], extraBursts = [];
+  let messageIndex = 0;
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    starCanvas.width = W * dpr; starCanvas.height = H * dpr;
+    starCanvas.style.width = W + 'px'; starCanvas.style.height = H + 'px';
+    starCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const rect = heartCanvas.getBoundingClientRect();
+    heartCanvas.width = Math.max(1, rect.width * dpr);
+    heartCanvas.height = Math.max(1, rect.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    makeStars();
+    makeHeart();
+  }
+  function makeStars() {
+    stars = [];
+    const count = Math.floor((W * H) / 3500);
+    for (let i = 0; i < count; i++) stars.push({
+      x: Math.random() * W, y: Math.random() * H,
+      r: Math.random() * 1.35 + .2, phase: Math.random() * Math.PI * 2,
+      speed: Math.random() * .025 + .006
+    });
+  }
+  function makeHeart() {
+    const rect = heartCanvas.getBoundingClientRect();
+    const w = rect.width, h = rect.height;
+    particles = [];
+    const scale = Math.min(w / 34, h / 31);
+    const cx = w / 2, cy = h * .48;
+    // Sample the classic parametric heart outline, then fill it with scattered particles.
+    const outline = [];
+    for (let i = 0; i < 900; i++) {
+      const t = Math.PI * 2 * i / 900;
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+      outline.push({ x: cx + x * scale, y: cy - y * scale });
+    }
+    // Outline particles.
+    for (let i = 0; i < outline.length; i += 2) {
+      const p = outline[i];
+      particles.push({ x:p.x, y:p.y, ox:p.x, oy:p.y, size:Math.random()*1.4+.55, phase:Math.random()*6.28, speed:.012+Math.random()*.025, outline:true });
+    }
+    // Interior flecks concentrated toward the heart outline.
+    for (let i = 0; i < 440; i++) {
+      const t = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random());
+      const x = 16 * Math.pow(Math.sin(t), 3) * r;
+      const y = (13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t)) * r;
+      const px = cx + x * scale, py = cy - y * scale;
+      particles.push({ x:px, y:py, ox:px, oy:py, size:Math.random()*.9+.25, phase:Math.random()*6.28, speed:.008+Math.random()*.02, outline:false });
+    }
+  }
+  function drawStars(time) {
+    starCtx.clearRect(0, 0, W, H);
+    for (const s of stars) {
+      const alpha = .25 + (Math.sin(time*s.speed + s.phase) + 1) * .32;
+      starCtx.beginPath();
+      starCtx.fillStyle = `rgba(223,190,255,${alpha})`;
+      starCtx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      starCtx.fill();
+    }
+  }
+  function drawHeart(time) {
+    const rect = heartCanvas.getBoundingClientRect();
+    const w = rect.width, h = rect.height;
+    ctx.clearRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'lighter';
+    const pulse = 1 + Math.sin(time * .0018) * .018;
+    for (const p of particles) {
+      const shimmer = .55 + (Math.sin(time*p.speed + p.phase) + 1) * .35;
+      const drift = Math.sin(time*.0007 + p.phase) * (p.outline ? 1.3 : 2.8);
+      const x = (p.ox - w/2) * pulse + w/2 + drift;
+      const y = (p.oy - h/2) * pulse + h/2 + Math.cos(time*.0008+p.phase)*1.5;
+      const pink = p.outline ? '255,54,220' : '218,101,255';
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(${pink},${shimmer})`;
+      ctx.shadowColor = p.outline ? '#ff2bd6' : '#a84cff';
+      ctx.shadowBlur = p.outline ? 8 : 4;
+      ctx.arc(x, y, p.size * (p.outline ? 1 : .85), 0, Math.PI*2);
+      ctx.fill();
+    }
+    // Tiny drifting sparkles around the heart.
+    for (const b of extraBursts) {
+      const age = (time - b.start) / 1000;
+      if (age > 1.8) continue;
+      const x = b.x + b.vx * age * 35, y = b.y + b.vy * age * 35;
+      ctx.beginPath(); ctx.fillStyle = `rgba(255,185,250,${1-age/1.8})`;
+      ctx.shadowColor = '#ff5be5'; ctx.shadowBlur = 10;
+      ctx.arc(x,y,Math.max(.1,2-age),0,Math.PI*2); ctx.fill();
+    }
+    extraBursts = extraBursts.filter(b => time - b.start < 1800);
+    ctx.globalCompositeOperation = 'source-over'; ctx.shadowBlur = 0;
+  }
+  function animate(time) { drawStars(time); drawHeart(time); requestAnimationFrame(animate); }
+  function burst() {
+    const rect = heartCanvas.getBoundingClientRect();
+    for (let i = 0; i < 95; i++) {
+      const a = Math.random() * Math.PI * 2, speed = .4 + Math.random() * 2;
+      extraBursts.push({ x:rect.width/2, y:rect.height*.48, vx:Math.cos(a)*speed, vy:Math.sin(a)*speed, start:performance.now() });
+    }
+  }
+  const messages = [
+    'If I could choose one place to be, it would be right beside you. ♡',
+    'You are my favorite hello and the goodbye I never want to say.',
+    'In every version of my future, I hope I get to find you there. ✨'
+  ];
+  document.getElementById('burstBtn').addEventListener('click', burst);
+  document.getElementById('messageBtn').addEventListener('click', () => {
+    messageIndex = (messageIndex + 1) % messages.length;
+    document.querySelector('.message-card p').textContent = messages[messageIndex];
+    burst();
+  });
+  window.addEventListener('resize', resize);
+  resize();
+  requestAnimationFrame(animate);
+})();
+</script>
+</body>
+</html>
